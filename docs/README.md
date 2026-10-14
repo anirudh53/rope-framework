@@ -11,6 +11,7 @@ Reference for contributors and integrators working with the ROPE source code dir
 | [interpolation.md](interpolation.md) | ForecastGrid structure, coordinate handling, trilinear spatial interpolation in log₁₀ space, temporal blending |
 | [forecast-cache-format.md](forecast-cache-format.md) | The on-disk forecast-grid cache file: layout, atomic writes, memory-mapped reads |
 | [model-artifacts.md](model-artifacts.md) | ONNX models, stats files, manifest-driven driver/IC config, version compatibility |
+| [addons.md](addons.md) | Optional add-ons: data-assimilation initial conditions, F10.7 forecaster, input uncertainty, GPU decoder |
 | [io.md](io.md) | CsvReader, ConfigReader, Stats/FeatureNormalizer, binary format details, adding new formats |
 | [adding-a-pipeline.md](adding-a-pipeline.md) | How to add a new pipeline kind: registry, manifest spec, checklist |
 | [version-control.md](version-control.md) | Branch model: main/develop/feature/bugfix conventions and release tagging |

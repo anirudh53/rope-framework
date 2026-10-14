@@ -34,6 +34,18 @@ struct StackedEnsembleSpec {
     MetaModelSpec              meta_model;
 };
 
+// Optional add-on artifacts (manifest "addons" block). A manifest without the block, or a
+// framework build without add-on support, behaves exactly as before; add-ons only run when
+// rope.conf enables them (see docs/addons.md).
+struct AddonsSpec {
+    // addons.data_assimilation.file — .dabin assimilated-IC table (relative to exported_dir).
+    std::string da_file;
+    // addons.f10_forecaster.ensembles.<type>.file — .f10bin F10.7 ensembles, by type name.
+    std::map<std::string, std::string> f10_files;
+    // addons.f10_forecaster.default — ensemble type used when rope.conf names none.
+    std::string f10_default;
+};
+
 struct RuntimeRequirements {
     std::string onnxruntime;  // major.minor, empty if not required by this manifest
     std::string libtorch;     // major.minor, empty if not required by this manifest
@@ -83,6 +95,9 @@ struct ModelManifest {
 
     // Present iff kind == "stacked_ensemble".
     std::optional<StackedEnsembleSpec> stacked_ensemble;
+
+    // Optional add-on artifacts; empty when the manifest has no "addons" block.
+    AddonsSpec addons;
 
     // Throws on missing/malformed file, unsupported schema_version/kind, or invalid fields.
     static ModelManifest load(const std::filesystem::path& exported_dir);

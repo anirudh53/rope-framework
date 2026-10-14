@@ -578,3 +578,72 @@ def test_bad_exported_dir_forecast_fails_but_existing_cache_survives(tmp_path):
         "--time", QUERY_TIME, "--lst", "12.0", "--lat", "45.0", "--alt", "400.0",
     )
     assert probe.returncode == 0, "a failed forecast must not clobber the existing cache file"
+
+
+# ---------------------------------------------------------------------------
+# Add-ons (docs/addons.md). The synthetic fixture model has no "addons" block, so these check
+# the switches and error paths; add-on numerics are covered by tests/cpp/test_addons.cpp.
+# ---------------------------------------------------------------------------
+
+def test_forecast_addon_flags_off_match_default(forecast_cache):
+    result = forecast_cache.run(
+        "forecast", "--start", FORECAST_START, "--horizon", str(FORECAST_HORIZON),
+        "--config", forecast_cache.conf, "--da", "off", "--f10-forecaster", "off",
+    )
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout.strip().splitlines()[-1])
+    assert data["status"] == "ok"
+    assert "addons" not in data
+
+
+def test_forecast_addon_flag_rejects_bad_value(forecast_cache):
+    result = forecast_cache.run(
+        "forecast", "--start", FORECAST_START, "--horizon", str(FORECAST_HORIZON),
+        "--config", forecast_cache.conf, "--da", "maybe",
+    )
+    assert result.returncode != 0
+
+
+def test_forecast_da_without_addon_fails_clearly(forecast_cache):
+    result = forecast_cache.run(
+        "forecast", "--start", FORECAST_START, "--horizon", str(FORECAST_HORIZON),
+        "--config", forecast_cache.conf, "--da", "on",
+    )
+    assert result.returncode != 0
+    assert "addons.data_assimilation" in result.stderr
+
+
+def test_forecast_f10_forecaster_without_addon_fails_clearly(forecast_cache):
+    result = forecast_cache.run(
+        "forecast", "--start", FORECAST_START, "--horizon", str(FORECAST_HORIZON),
+        "--config", forecast_cache.conf, "--f10-forecaster", "on",
+    )
+    assert result.returncode != 0
+    assert "addons.f10_forecaster" in result.stderr
+
+
+def test_forecast_cli_flag_overrides_enabled_addon_in_config(forecast_cache, tmp_path):
+    conf = tmp_path / "rope_da_on.conf"
+    _write_conf(conf)
+    conf.write_text(conf.read_text() + "\n[data_assimilation]\nenabled = true\n")
+    on = forecast_cache.run("forecast", "--start", FORECAST_START, "--horizon",
+                            str(FORECAST_HORIZON), "--config", str(conf))
+    assert on.returncode != 0 and "addons.data_assimilation" in on.stderr
+    off = forecast_cache.run("forecast", "--start", FORECAST_START, "--horizon",
+                             str(FORECAST_HORIZON), "--config", str(conf), "--da", "off")
+    assert off.returncode == 0, off.stderr
+
+
+def test_rope_binding_forecast_passes_addon_switches(tmp_path):
+    sys.path.insert(0, str(_project_root / "python"))
+    from rope import Rope, RopeError
+
+    conf = tmp_path / "rope_binding.conf"
+    _write_conf(conf)
+    cache = str(tmp_path / "addon_switch_forecast_grid.bin")
+    r = Rope(lib_path=Path(ROPE_LIB), exe_path=Path(ROPE_EXE), cache_path=cache, config_path=conf)
+
+    ok = r.forecast(FORECAST_START, FORECAST_HORIZON, use_da=False, use_f10_forecaster=False)
+    assert ok["status"] == "ok"
+    with pytest.raises(RopeError, match="addons.data_assimilation"):
+        r.forecast(FORECAST_START, FORECAST_HORIZON, use_da=True)

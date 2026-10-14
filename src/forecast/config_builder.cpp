@@ -27,6 +27,18 @@ Config config_from_reader(const io::ConfigReader& config,
     // Fallback is 0, not rope.conf.in's shipped 48; a config that omits this key keeps unchanged behavior.
     fcfg.warmup_time_hours     = config.get_int("forecast.warmup_time_hours", 0);
 
+    // Add-ons: absent sections/keys keep them off.
+    fcfg.use_da           = config.get("data_assimilation.enabled", "false") == "true";
+    if (config.has("data_assimilation.states_path"))
+        fcfg.da_states_path = resolve(config.get("data_assimilation.states_path"));
+    fcfg.da_ic_cov_mode   = config.get("data_assimilation.ic_cov_mode", "hour_avg");
+    fcfg.da_ic_cov_scale  = config.get_double("data_assimilation.ic_cov_scale", 1.0);
+    fcfg.use_f10_forecaster = config.get("f10_forecaster.enabled", "false") == "true";
+    fcfg.f10_ensemble     = config.get("f10_forecaster.ensemble", "");
+    if (config.has("f10_forecaster.ensemble_path"))
+        fcfg.f10_ensemble_path = resolve(config.get("f10_forecaster.ensemble_path"));
+    fcfg.f10_sigma        = config.get_double("f10_forecaster.sigma", 0.0);
+
     return fcfg;
 }
 

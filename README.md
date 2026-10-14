@@ -132,6 +132,19 @@ rope forecast --driver sw.swbin --start "2024-06-01 00:00:00" --horizon 24
 
 `convert-sw` auto-detects raw CelesTrak vs. ROPE's own CSV format from the header — no flag needed either way.
 
+### Add-ons: data assimilation and F10.7 forecasting
+
+Models that ship add-on files (see `rope manifest`) can be seeded with an assimilated initial condition and/or driven
+by an F10.7 forecast after the start time. Both are off by default and switched on in `rope.conf`
+(`[data_assimilation] enabled`, `[f10_forecaster] enabled`) or per run:
+
+```
+rope forecast --start "2024-05-10 18:00:00" --horizon 72 --da on --f10-forecaster on
+```
+
+The output cache is unchanged: density, plus an uncertainty that then also includes the input (initial-condition
+and/or F10.7) uncertainty. The JSON status gains an `addons` entry. See [docs/addons.md](docs/addons.md).
+
 ### Use a non-default config
 
 ```
@@ -222,7 +235,7 @@ The `with` block calls `open()` on entry and `close()` on exit. `shutdown()` is 
 | Member | Description |
 |--------|-------------|
 | `Rope(lib_path, exe_path, cache_path, config_path, device)` | Constructor — all parameters optional |
-| `forecast(start, horizon, drivers=None)` → `dict` | Run a forecast; returns `{"status", "window_start", "window_end"}`. `drivers` supplies driver data inline for this call only, overriding `paths.driver_path`/`manifest.drivers.source` |
+| `forecast(start, horizon, drivers=None, use_da=None, use_f10_forecaster=None)` → `dict` | Run a forecast; returns `{"status", "window_start", "window_end"}` (+ `"addons"` when one is on). `drivers` supplies driver data inline for this call only, overriding `paths.driver_path`/`manifest.drivers.source`. `use_da` / `use_f10_forecaster` switch the add-ons for this call (`None` = `rope.conf`) |
 | `open()` | Memory-map the cached grid and open an interpolation handle |
 | `close()` | Release the handle (unmaps the cache file) |
 | `refresh()` | Re-map the cache file after a new forecast |
@@ -408,6 +421,7 @@ r.Dispose();
 | `Forecast(string start, int horizon)` | Run a forecast; returns `ForecastResult` with `WindowStart` / `WindowEnd` |
 | `Forecast(DateTime start, int horizon)` | DateTime overload |
 | `Forecast(..., IDictionary<string,object[]> drivers)` | Overload (string or DateTime start) that supplies driver data inline for this call only, overriding `paths.driver_path`/`manifest.drivers.source` |
+| `Forecast(..., drivers, bool? useDa, bool? useF10Forecaster)` | Overload that also switches the add-ons for this call (`null` = `rope.conf`; `drivers` may be `null`) |
 | `Open()` | Memory-map the cached grid and open an interpolation handle |
 | `Close()` | Release the handle (unmaps the cache file) |
 | `Refresh()` | Re-map the cache file after a new forecast |

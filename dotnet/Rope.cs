@@ -314,7 +314,27 @@ namespace RopeFramework
         ///   inline. All-or-nothing: a column the model needs but this dict omits is not
         ///   backfilled from any other source.
         /// </param>
-        public ForecastResult Forecast(string start, int horizon, IDictionary<string, object[]> drivers)
+        public ForecastResult Forecast(string start, int horizon, IDictionary<string, object[]> drivers) =>
+            Forecast(start, horizon, drivers, null, null);
+
+        /// <summary>Run a forecast with the add-ons switched on/off for this call only.</summary>
+        /// <param name="start">Forecast start time (UTC).</param>
+        /// <param name="horizon">Forecast duration in hours.</param>
+        /// <param name="drivers">Explicit driver columns, or null (see the overload above).</param>
+        /// <param name="useDa">Data-assimilation initial condition; null keeps rope.conf's [data_assimilation] enabled.</param>
+        /// <param name="useF10Forecaster">F10.7 forecaster after the start; null keeps rope.conf's [f10_forecaster] enabled.</param>
+        public ForecastResult Forecast(DateTime start, int horizon, IDictionary<string, object[]> drivers,
+                                       bool? useDa, bool? useF10Forecaster) =>
+            Forecast(start.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"), horizon, drivers, useDa, useF10Forecaster);
+
+        /// <summary>Run a forecast with the add-ons switched on/off for this call only.</summary>
+        /// <param name="start">ISO 8601 forecast start time string (UTC).</param>
+        /// <param name="horizon">Forecast duration in hours.</param>
+        /// <param name="drivers">Explicit driver columns, or null (see the overload above).</param>
+        /// <param name="useDa">Data-assimilation initial condition; null keeps rope.conf's [data_assimilation] enabled.</param>
+        /// <param name="useF10Forecaster">F10.7 forecaster after the start; null keeps rope.conf's [f10_forecaster] enabled.</param>
+        public ForecastResult Forecast(string start, int horizon, IDictionary<string, object[]> drivers,
+                                       bool? useDa, bool? useF10Forecaster)
         {
             if (_exePath == null)
                 throw new InvalidOperationException(
@@ -347,6 +367,10 @@ namespace RopeFramework
                     sb.Append(tempDriverPath);
                     sb.Append('"');
                 }
+                if (useDa.HasValue)
+                    sb.Append(useDa.Value ? " --da on" : " --da off");
+                if (useF10Forecaster.HasValue)
+                    sb.Append(useF10Forecaster.Value ? " --f10-forecaster on" : " --f10-forecaster off");
 
                 var proc = Process.Start(new ProcessStartInfo(_exePath, sb.ToString())
                 {

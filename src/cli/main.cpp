@@ -49,6 +49,8 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <iterator>
 #include <optional>
@@ -145,7 +147,7 @@ int main(int argc, char** argv) {
     // ---- forecast subcommand ----
     auto* fc = app.add_subcommand("forecast",
                                    "Run a forecast and cache the resulting grid");
-    std::string fc_start, fc_config, fc_zarr, fc_driver;
+    std::string fc_start, fc_config, fc_zarr, fc_driver, fc_da, fc_f10;
     int         fc_horizon = 0;
     fc->add_option("--start",   fc_start,   "Forecast start time (ISO 8601, UTC)")
       ->required();
@@ -157,6 +159,12 @@ int main(int argc, char** argv) {
     fc->add_option("--driver",  fc_driver,
                    "Explicit driver .swbin/CSV path in ROPE's own format (overrides paths.driver_path; "
                    "raw CelesTrak CSVs need 'rope convert-sw' first)");
+    fc->add_option("--da", fc_da,
+                   "Data-assimilation initial condition for this run: on|off (overrides [data_assimilation] enabled)")
+      ->check(CLI::IsMember({"on", "off"}));
+    fc->add_option("--f10-forecaster", fc_f10,
+                   "F10.7 forecaster after the start time for this run: on|off (overrides [f10_forecaster] enabled)")
+      ->check(CLI::IsMember({"on", "off"}));
 
     // ---- manifest subcommand ----
     auto* mc = app.add_subcommand("manifest",
@@ -235,6 +243,14 @@ int main(int argc, char** argv) {
             auto fcfg = rope::forecast::config_from_reader(config, config_path.parent_path());
             if (!fc_driver.empty())
                 fcfg.driver_path = fs::path{fc_driver};
+            if (!fc_da.empty())  fcfg.use_da             = fc_da  == "on";
+            if (!fc_f10.empty()) fcfg.use_f10_forecaster = fc_f10 == "on";
+            // The assimilated state is the estimate at the start time itself: no warm-up with DA.
+            if (fcfg.use_da && fcfg.warmup_time_hours > 0) {
+                std::cerr << "rope forecast: data assimilation on, warm-up ("
+                          << fcfg.warmup_time_hours << "h) skipped\n";
+                fcfg.warmup_time_hours = 0;
+            }
             auto pipeline = rope::forecast::load(fcfg);
 
             // Output spans hour 0 (fc_start) through hour fc_horizon, inclusive.
@@ -328,6 +344,8 @@ int main(int argc, char** argv) {
                 {"window_start", window_start},
                 {"window_end",   window_end}
             };
+            if (const std::string info = pipeline->run_info_json(); !info.empty())
+                status["addons"] = json::parse(info);
 
 #ifdef ROPE_HAS_ZARR
             if (zarr) {
@@ -339,9 +357,15 @@ int main(int argc, char** argv) {
             std::cout << status.dump() << "\n";
         } catch (const std::exception& e) {
             std::cerr << "rope forecast: " << e.what() << "\n";
-            return 1;
+            std::cerr.flush();
+            std::_Exit(1);
         }
-        return 0;
+        // The cache file is complete and the status printed; leave without running static
+        // destructors. ONNX Runtime's own globals can crash during exit teardown when its CUDA
+        // execution provider was used (heap corruption inside libonnxruntime's exit handlers).
+        std::cout.flush();
+        std::fflush(nullptr);
+        std::_Exit(0);
 #endif
     }
 

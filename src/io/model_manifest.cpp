@@ -285,6 +285,34 @@ ModelManifest ModelManifest::load(const std::filesystem::path& exported_dir) {
 
     m.stacked_ensemble = std::move(spec);
 
+    // Optional add-ons (forward-compatible: older builds ignore this block entirely).
+    if (j.contains("addons") && j["addons"].is_object()) {
+        const auto& ja = j["addons"];
+        if (ja.contains("data_assimilation") && ja["data_assimilation"].is_object()) {
+            const auto& jd = ja["data_assimilation"];
+            if (!jd.contains("file") || !jd["file"].is_string())
+                throw std::runtime_error(
+                    "ModelManifest::load: addons.data_assimilation missing 'file' in " + ps);
+            m.addons.da_file = jd["file"].get<std::string>();
+        }
+        if (ja.contains("f10_forecaster") && ja["f10_forecaster"].is_object()) {
+            const auto& jf = ja["f10_forecaster"];
+            if (jf.contains("ensembles") && jf["ensembles"].is_object())
+                for (const auto& [name, je] : jf["ensembles"].items()) {
+                    if (!je.is_object() || !je.contains("file") || !je["file"].is_string())
+                        throw std::runtime_error(
+                            "ModelManifest::load: addons.f10_forecaster.ensembles." + name +
+                            " missing 'file' in " + ps);
+                    m.addons.f10_files[name] = je["file"].get<std::string>();
+                }
+            m.addons.f10_default = jf.value("default", std::string{});
+            if (!m.addons.f10_default.empty() && !m.addons.f10_files.count(m.addons.f10_default))
+                throw std::runtime_error(
+                    "ModelManifest::load: addons.f10_forecaster.default '" + m.addons.f10_default +
+                    "' is not one of its ensembles in " + ps);
+        }
+    }
+
     // Cross-check: every backend referenced must have a version in runtime_requirements.
     std::set<std::string> used_backends;
     for (const auto& bm : m.stacked_ensemble->base_models)
@@ -322,6 +350,16 @@ std::string ModelManifest::to_summary_json() const {
         {"kind", ic_kind},
         {"axes", ic_grid_axes}
     };
+    if (!addons.da_file.empty() || !addons.f10_files.empty()) {
+        auto& ja = j["addons"] = nlohmann::json::object();
+        if (!addons.da_file.empty())
+            ja["data_assimilation"] = {{"file", addons.da_file}};
+        if (!addons.f10_files.empty()) {
+            auto names = nlohmann::json::array();
+            for (const auto& [name, _] : addons.f10_files) names.push_back(name);
+            ja["f10_forecaster"] = {{"default", addons.f10_default}, {"ensembles", names}};
+        }
+    }
     j["drivers"]["source"] = driver_source;
     auto& jcols = j["drivers"]["columns"] = nlohmann::json::array();
     for (const auto& col : driver_column_info)

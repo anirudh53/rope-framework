@@ -32,6 +32,41 @@ exported_dir = ../data/models/wam-borealis-v1
 # driver_path = ../data/drivers/sw_celestrak_example.swbin
 
 # ---------------------------------------------------------------------------
+[data_assimilation]
+# ---------------------------------------------------------------------------
+# Add-on (docs/addons.md): seed the forecast with the assimilated state at the start time
+# instead of the IC table. Needs a model whose manifest has addons.data_assimilation and a
+# start inside that table's coverage. Warm-up is skipped when this is on.
+enabled = false
+
+# .dabin override; defaults to the model's own addons.data_assimilation.file
+# states_path = ../data/models/<model>/addons/da_states_<first>_<last>.dabin
+
+# How the 3-hour DA covariance becomes the initial-condition covariance:
+#   hour_avg = mean of the per-hour blocks, mean = covariance of the mean state, last = start hour only
+ic_cov_mode = hour_avg
+
+# Multiplies the DA standard deviations (1 = as estimated by the filter)
+ic_cov_scale = 1.0
+
+# ---------------------------------------------------------------------------
+[f10_forecaster]
+# ---------------------------------------------------------------------------
+# Add-on (docs/addons.md): F10.7 after the start time comes from the F10.7 forecaster ensemble
+# (its mean), and its spread becomes an input uncertainty. Observed drivers are kept up to
+# the start time. Needs a model whose manifest has addons.f10_forecaster.
+enabled = false
+
+# Ensemble from the manifest (e.g. LSTM_dynamic, MLP_dynamic); empty = the manifest default
+# ensemble = LSTM_dynamic
+
+# .f10bin override
+# ensemble_path = ../data/models/<model>/addons/f10_LSTM_dynamic.f10bin
+
+# Fixed F10.7 sigma in sfu; 0 = the ensemble spread averaged over the forecast days
+sigma = 0
+
+# ---------------------------------------------------------------------------
 [driver_cache]
 # ---------------------------------------------------------------------------
 

@@ -34,7 +34,8 @@ public:
     explicit OnnxModel(const std::string& path,
                        int intra_op_threads = 1,
                        int inter_op_threads = 1,
-                       bool use_dnnl       = false)
+                       bool use_dnnl       = false,
+                       const std::string& device = "cpu")
         : name_(path)
     {
         Ort::SessionOptions opts;
@@ -42,6 +43,36 @@ public:
         opts.SetIntraOpNumThreads(intra_op_threads);
         opts.SetInterOpNumThreads(inter_op_threads);
         opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+
+#ifdef ROPE_ORT_CUDA
+        // CUDA builds: "cuda" / "cuda:N" runs this model on the GPU through ORT's CUDA EP.
+        // TF32 off: it measurably changes the COAE decoder's output. If the EP can't be created
+        // (no GPU, missing CUDA 12 / cuDNN 9 runtime libraries) the model stays on the CPU.
+        if (device.rfind("cuda", 0) == 0) {
+            (void)detail::ort_env();   // the EP needs ORT's logger, which the Env creates
+            const std::string id = device.size() > 5 && device[4] == ':' ? device.substr(5) : "0";
+            const OrtApi& api = Ort::GetApi();
+            OrtCUDAProviderOptionsV2* cuda = nullptr;
+            OrtStatus* st = api.CreateCUDAProviderOptions(&cuda);
+            if (!st) {
+                const char* keys[] = {"device_id", "use_tf32"};
+                const char* vals[] = {id.c_str(), "0"};
+                st = api.UpdateCUDAProviderOptions(cuda, keys, vals, 2);
+            }
+            if (!st)
+                st = api.SessionOptionsAppendExecutionProvider_CUDA_V2(opts, cuda);
+            if (st) {
+                std::cerr << "  [CUDA execution provider unavailable for " << device
+                          << ", running on CPU: " << api.GetErrorMessage(st) << "]\n";
+                api.ReleaseStatus(st);
+            } else {
+                on_gpu_ = true;
+            }
+            if (cuda) api.ReleaseCUDAProviderOptions(cuda);
+        }
+#else
+        (void)device;
+#endif
 
 #ifdef ROPE_USE_DNNL
         if (use_dnnl) {
@@ -58,8 +89,22 @@ public:
         (void)use_dnnl;
 #endif
 
-        session_ = std::make_unique<Ort::Session>(
-            detail::ort_env(), std::filesystem::path(path).c_str(), opts);
+        try {
+            session_ = std::make_unique<Ort::Session>(
+                detail::ort_env(), std::filesystem::path(path).c_str(), opts);
+        } catch (const Ort::Exception& e) {
+            if (!on_gpu_) throw;
+            // The CUDA EP registers lazily; a missing CUDA/cuDNN library surfaces here.
+            std::cerr << "  [CUDA session failed for " << device << ", running on CPU: " << e.what() << "]\n";
+            on_gpu_ = false;
+            Ort::SessionOptions cpu;
+            cpu.SetLogSeverityLevel(3);
+            cpu.SetIntraOpNumThreads(intra_op_threads);
+            cpu.SetInterOpNumThreads(inter_op_threads);
+            cpu.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+            session_ = std::make_unique<Ort::Session>(
+                detail::ort_env(), std::filesystem::path(path).c_str(), cpu);
+        }
 
         Ort::AllocatorWithDefaultOptions alloc;
         size_t n_in  = session_->GetInputCount();
@@ -140,7 +185,11 @@ public:
 
     const std::string& name() const override { return name_; }
 
+public:
+    bool on_gpu() const noexcept { return on_gpu_; }
+
 private:
+    bool on_gpu_ = false;
     static size_t numel(const std::vector<int64_t>& shape) {
         size_t n = 1;
         for (auto d : shape) n *= static_cast<size_t>(d);

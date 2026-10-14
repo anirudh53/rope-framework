@@ -75,12 +75,18 @@ if(TARGET rope_forecast)
         test_pipeline.cpp
         test_manifest_failures.cpp
         test_streaming_pipeline.cpp
+        test_addons.cpp
     )
     target_link_libraries(rope_pipeline_tests
         PRIVATE Catch2::Catch2WithMain
                 rope_forecast
                 rope_io
                 rope_core
+                nlohmann_json::nlohmann_json
+    )
+    # test_addons.cpp exercises the F10 ensemble directly (src/forecast/addons/).
+    target_include_directories(rope_pipeline_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../src/forecast"
     )
     target_compile_definitions(rope_pipeline_tests PRIVATE
         ROPE_FIXTURE_DIR="${ROPE_FIXTURE_DIR}"

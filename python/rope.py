@@ -220,6 +220,8 @@ class Rope:
         start: "str | datetime",
         horizon: int,
         drivers: "dict | None" = None,
+        use_da: "bool | None" = None,
+        use_f10_forecaster: "bool | None" = None,
     ) -> dict:
         """
         Run a forecast and atomically write the resulting grid to the cache
@@ -240,9 +242,16 @@ class Rope:
                   explicit driver_path CSV, just supplied inline. All-or-nothing:
                   a column the model needs but this dict omits is not backfilled
                   from any other source.
+        use_da  : Data-assimilation initial condition for this call (True/False);
+                  None keeps rope.conf's [data_assimilation] enabled. Needs a model
+                  with the add-on and a start inside its DA coverage.
+        use_f10_forecaster : F10.7 from the forecaster after the start time for
+                  this call (True/False); None keeps rope.conf's [f10_forecaster] enabled.
 
         Returns the CLI's response, e.g.:
             {"status": "ok", "window_start": "...", "window_end": "..."}
+        plus an "addons" entry describing the DA state / F10 forecast used,
+        when an add-on was on.
         """
         if self._exe_path is None:
             raise RuntimeError("rope executable not found; cannot run forecast")
@@ -259,6 +268,10 @@ class Rope:
         cmd += ["forecast", "--start", start, "--horizon", str(horizon)]
         if self._config_path:
             cmd += ["--config", str(self._config_path)]
+        if use_da is not None:
+            cmd += ["--da", "on" if use_da else "off"]
+        if use_f10_forecaster is not None:
+            cmd += ["--f10-forecaster", "on" if use_f10_forecaster else "off"]
 
         temp_driver_path = None
         try:

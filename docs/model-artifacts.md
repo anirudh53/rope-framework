@@ -133,6 +133,12 @@ Converted from `IC_Table_modified.csv` via `rope convert-ic`.
 
 ---
 
+## Add-on artifacts (optional)
+
+`addons/*.dabin` (data-assimilation initial conditions) and `addons/*.f10bin` (F10.7 forecaster
+ensembles), declared under the manifest's optional `addons` block. Off unless enabled in rope.conf;
+see [addons.md](addons.md).
+
 ## Version compatibility
 
 The `forecast-invariants.md` rule applies: model artifacts are version-locked to the runtime they were exported with. ORT and LibTorch versions are pinned in `cmake/Dependencies.cmake`. Loading a model exported against a different ORT version is a hard failure. Never silently downgrade or substitute — a mismatch that appears to work may produce wrong results.

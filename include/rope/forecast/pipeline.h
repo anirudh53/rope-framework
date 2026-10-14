@@ -57,7 +57,27 @@ struct Config {
     int decode_batch_size = 0;
 
     // Hours run before start_time to let the model settle; spin-up only, never decoded/cached. Default 0 here; rope.conf.in ships 48.
+    // The forecast origin is start + warmup_time_hours (the CLI passes the warm-up start to run_streaming()).
     int warmup_time_hours = 0;
+
+    // ---- Add-ons (docs/addons.md). Both off: the pipeline is unchanged. ----
+    // [data_assimilation] enabled: seed the rollout with the assimilated state at the forecast origin.
+    bool use_da = false;
+    // .dabin override; empty: the manifest's addons.data_assimilation.file.
+    std::filesystem::path da_states_path;
+    // How the S-hour joint DA covariance becomes the covariance of the IC shift: hour_avg | mean | last.
+    std::string da_ic_cov_mode = "hour_avg";
+    // Multiplies the DA standard deviations.
+    double da_ic_cov_scale = 1.0;
+
+    // [f10_forecaster] enabled: F10.7 after the forecast origin comes from the F10 ensemble.
+    bool use_f10_forecaster = false;
+    // Ensemble type (a key of the manifest's addons.f10_forecaster.ensembles); empty: manifest default.
+    std::string f10_ensemble;
+    // .f10bin override; empty: from the manifest.
+    std::filesystem::path f10_ensemble_path;
+    // Fixed F10.7 sigma (sfu); <= 0: the ensemble spread averaged over the forecast days.
+    double f10_sigma = 0.0;
 
     // Load-progress callback. Default (nullptr): silent.
     std::function<void(std::string_view)> log;
@@ -112,6 +132,9 @@ public:
     virtual GridSpec grid_shape() const = 0;
     virtual std::string model_kind() const = 0;
     virtual int latent_dim() const = 0;
+
+    // JSON object describing add-ons used by the last run_streaming() (empty: none / unsupported).
+    virtual std::string run_info_json() const { return {}; }
 };
 
 // Constructs and initializes the pipeline from cfg. Throws on error.

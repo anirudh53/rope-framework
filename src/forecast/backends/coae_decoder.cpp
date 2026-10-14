@@ -43,7 +43,11 @@ CoaeDecoder::CoaeDecoder(
 #else
         std::string  dec_key    = "onnx";
         ModelBackend dec_be     = ModelBackend::ONNX;
+#  ifdef ROPE_ORT_CUDA
+        std::string  dec_device = cfg.decoder_device;   // CUDA builds: ORT CUDA EP (see onnx_model.h)
+#  else
         std::string  dec_device = "cpu";
+#  endif
 #endif
         auto it = d.backends.find(dec_key);
         if (it == d.backends.end())
@@ -56,7 +60,7 @@ CoaeDecoder::CoaeDecoder(
             std::to_string(d.alt_end) + "): backend=libtorch  device=" + dec_device);
 #else
         log("  stage [" + std::to_string(d.alt_start) + ", " +
-            std::to_string(d.alt_end) + "): backend=onnx  threads=" +
+            std::to_string(d.alt_end) + "): backend=onnx  device=" + dec_device + "  threads=" +
             std::to_string(dec_threads));
 #endif
 

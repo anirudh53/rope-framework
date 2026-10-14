@@ -175,6 +175,7 @@ add_library(rope_io STATIC
     src/io/driver_cache.cpp
     src/io/ic_table.cpp
     src/io/ic_bin.cpp
+    src/io/da_states.cpp
     src/io/model_manifest.cpp
     src/io/forecast_grid_bin.cpp
     src/io/mapped_forecast_grid.cpp
@@ -233,6 +234,7 @@ if(ORT_INC AND ORT_LIB)
         src/forecast/backends/coae_decoder.cpp
         src/forecast/stacked_ensemble/stacked_ensemble_pipeline.cpp
         src/forecast/stacked_ensemble/unscented_transform.cpp
+        src/forecast/addons/f10_ensemble.cpp
     )
     target_include_directories(rope_forecast
         PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -244,11 +246,16 @@ if(ORT_INC AND ORT_LIB)
                 rope_io
         PRIVATE ${ORT_LIB}
                 rope_net
+                nlohmann_json::nlohmann_json
     )
     if(Torch_FOUND)
         target_link_libraries(rope_forecast PRIVATE ${TORCH_LIBRARIES})
         target_include_directories(rope_forecast PRIVATE ${TORCH_INCLUDE_DIRS})
         target_compile_definitions(rope_forecast PRIVATE ROPE_USE_LIBTORCH)
+    endif()
+    if(ROPE_HARDWARE MATCHES "^cuda")
+        # ONNX Runtime CUDA execution provider for the decoder (backends/onnx_model.h)
+        target_compile_definitions(rope_forecast PRIVATE ROPE_ORT_CUDA)
     endif()
     if(OpenMP_CXX_FOUND)
         target_link_libraries(rope_forecast PRIVATE OpenMP::OpenMP_CXX)

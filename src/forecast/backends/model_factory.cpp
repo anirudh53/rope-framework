@@ -20,9 +20,8 @@ std::unique_ptr<IModel> make_model(
 {
     switch (backend) {
     case ModelBackend::ONNX:
-        (void)device;
         return std::make_unique<OnnxModel>(
-            path, intra_op_threads, inter_op_threads, use_dnnl);
+            path, intra_op_threads, inter_op_threads, use_dnnl, device);
 #ifdef ROPE_USE_LIBTORCH
     case ModelBackend::LibTorch:
         return std::make_unique<LibTorchModel>(path, device, intra_op_threads);
