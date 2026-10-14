@@ -11,7 +11,7 @@
   <PropertyGroup>
     <PackageId>RopeFramework</PackageId>
     <Version>0.2.0</Version>
-    <Authors>Violet Player</Authors>
+    <Authors>Violet Player; Anirudh Tapedia</Authors>
     <Description>C# binding for the ROPE atmospheric density framework. Wraps librope via P/Invoke for in-process interpolation queries, and the rope CLI for forecast and server lifecycle management. Supports .NET Framework 4.8 and .NET 8.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>

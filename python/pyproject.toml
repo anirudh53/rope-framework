@@ -7,7 +7,8 @@ name = "rope-framework"
 dynamic = ["version"]
 description = "Python binding for the ROPE atmospheric density framework."
 requires-python = ">=3.8"
-authors = [{name = "Violet Player", email = "violet.player@noaa.gov"}]
+authors = [{name = "Violet Player", email = "violet.player@noaa.gov"},
+           {name = "Anirudh Tapedia", email = "anirudh.tapedia@mail.wvu.edu"}]
 license = { text = "MIT" }
 dependencies = []
 

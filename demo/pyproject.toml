@@ -10,7 +10,8 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [{ name = "Sriram Narayanan", email = "sriram.narayanan@mail.wvu.edu" },
-{name = "Violet Player", email = "violet.player@noaa.gov"}]
+{name = "Violet Player", email = "violet.player@noaa.gov"},
+{name = "Anirudh Tapedia", email = "anirudh.tapedia@mail.wvu.edu"}]
 dependencies = [
     "numpy",
     "scipy",

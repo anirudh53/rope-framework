@@ -8,8 +8,8 @@ Beta release — not recommended for production. Breaking API changes may land b
 
 ## Contact Info
 
-Questions: [Violet Player](mailto:violet.player@noaa.gov) or [Piyush Mehta](mailto:piyush.mehta@mail.wvu.edu).
-Technical support: [Violet Player](mailto:violet.player@noaa.gov).
+Questions: [Violet Player](mailto:violet.player@noaa.gov), [Piyush Mehta](mailto:piyush.mehta@mail.wvu.edu) or [Anirudh Tapedia](mailto:anirudh.tapedia@mail.wvu.edu).
+Technical support: [Anirudh Tapedia](mailto:anirudh.tapedia@mail.wvu.edu) or [Violet Player](mailto:violet.player@noaa.gov).
 
 ## Requirements
 
